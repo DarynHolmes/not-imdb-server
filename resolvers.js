@@ -1,18 +1,14 @@
 const api = require('./api');
+const Film = require('./models').Film;
+const Review = require('./models').Review;
+
 
 const resolvers = {
     Query: {
         films(root, args){
 
             return api.searchByTitle(args.searchTerm)
-                .then(res => res.data.results.map( data => {
-                    return {
-                                id: data.id, 
-                                thumbnail: `http://image.tmdb.org/t/p/w500/${data.backdrop_path}`, 
-                                poster: `http://image.tmdb.org/t/p/w500/${data.poster_path}`, 
-                                title: data.original_title
-                        };
-                    })
+                .then(res => res.data.results.map(data => new Film (data))
                 )
                 .catch(console.error);
         }
@@ -20,31 +16,16 @@ const resolvers = {
     Film: {
         reviews(film) {
             return api.fetchReviews(film.id) 
-                .then(function (response) {
-                    return this.reviews = response.data.results.map(data => ({
-                                                        id: data.id, 
-                                                        author: data.author, 
-                                                        content: data.content,
-                                                        url: data.url,
-                                                        filmId: film.id
-                                                    }));
+                .then((response) => { 
+                    return response.data.results.map(data => new Review(Object.assign({}, data, {filmId: film.id})))
                 })
                 .catch(console.error);
         }
-                    
     },
     Review: {
         film(review) {
-            console.log("review", review.filmId);
             return api.fetchFilmById(review.filmId)
-                .then(res => {
-                    return  {
-                        id: res.data.id,
-                        title: res.data.original_title, 
-                        thumbnail: res.data.backdrop_path, 
-                        poster: res.data.poster_path
-                    }
-                })
+                .then(res => new Film(res.data))
                 .catch(console.error);
         }
     }
